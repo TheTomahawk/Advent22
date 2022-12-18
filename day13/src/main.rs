@@ -1,18 +1,10 @@
 use std::{
   env, fmt,
-  fmt::{Error, Formatter},
+  fmt::{Error, Formatter, Debug},
   fs::File,
   io::{BufRead, BufReader},
   str::Chars,
 };
-
-#[derive(Debug,PartialEq)]
-enum Comparison {
-  LT,
-  GT,
-  EQ,
-  NONE
-}
 
 pub fn main() {
   let args: Vec<String> = env::args().collect();
@@ -22,7 +14,6 @@ pub fn main() {
   part2(&filename);
 }
 
-#[derive(Debug)]
 struct Node {
   val: u16,
   is_list: bool,
@@ -38,6 +29,17 @@ impl Node {
     }
   }
 }
+
+impl fmt::Debug for Node {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    if !self.is_list {
+      write!(f, "{}", self.val)
+    } else {
+      write!(f, "{:?}", self.list)
+    }
+  }
+}
+
 
 fn part1(filename: &String) {
   let infile = BufReader::new(File::open(filename).expect("Can't open that file"));
@@ -55,7 +57,9 @@ fn part1(filename: &String) {
         0 => left = parse_line(&line),
         1 => right = parse_line(&line),
         2 => {
-          if compare_lists(&left, &right) {
+          let (ret, _) = compare_lists(&left, &right);
+          println!(":: received {:?}\n", ret);
+          if ret {
             sum += counter
           };
         }
@@ -70,7 +74,9 @@ fn part1(filename: &String) {
   }
 
   // EOF won't kick the counter up one, so we need one last compare
-  if compare_lists(&left, &right) {
+  let (ret, _) = compare_lists(&left, &right);
+  println!(":: received {:?}\n", ret);
+  if ret {
     sum += counter
   };
 
@@ -138,38 +144,48 @@ fn parse_line(line: &String) -> Vec<Node> {
   ret
 }
 
-fn compare_lists(left: &Vec<Node>, right: &Vec<Node>) -> bool {
+fn compare_lists(left: &Vec<Node>, right: &Vec<Node>) -> (bool, bool) {
   println!("Comparing...");
   println!("   left: {:?}", left);
   println!("  right: {:?}", right);
-  println!("");
 
   let mut ret = true;
+  let mut cont: bool = true;
 
-  if left.len() == 0 || right.len() == 0 {
-    ret = true;
+  if left.len() == 0 {
+    ret &= true;
     
+  } else if right.len() == 0 {
+    ret = false;
+    cont = false;
+
   } else {
     for n in 0..left.len() {
       if n < right.len() {
-        if compare_nodes(&left[n], &right[n]).0 == Comparison::LT {
-          break;
+        let (r,c) = compare_nodes(&left[n], &right[n]);
+        ret &= r;
+        if !c {
+          return (ret, false);
         }
       } else {
         ret = false;
       }
     }
   }
-  println!("  Result:  {}\n\n", ret);
-  ret
+  println!(" : {:?}, {:?}", ret, cont);
+  (ret, cont)
 }
 
-fn compare_nodes(left: &Node, right: &Node) -> (Comparison, bool) {
-  print!("n");
-  let mut ret:(Comparison, bool);
+fn compare_nodes(left: &Node, right: &Node) -> (bool, bool) {
+  let mut ret:bool = true;
+  let mut cont: bool = true;
 
   if left.is_list && right.is_list {
-    ret = (Comparison::NONE, compare_lists(&left.list, &right.list));
+    let (r,c) = compare_lists(&left.list, &right.list);
+    if !c {
+      return (r,c);
+    }
+    ret&=r;
 
   } else if left.is_list && !right.is_list {
     let mut val_as_list = Node::new();
@@ -177,7 +193,11 @@ fn compare_nodes(left: &Node, right: &Node) -> (Comparison, bool) {
     let mut new_node = Node::new();
     new_node.val = right.val;
     val_as_list.list.push(new_node);
-    ret = compare_nodes(left, &val_as_list);
+    let (r,c) = compare_nodes(left, &val_as_list);
+    if !c {
+      return (r,c);
+    }
+    ret&=r;
 
   } else if !left.is_list && right.is_list {
     let mut val_as_list = Node::new();
@@ -185,29 +205,25 @@ fn compare_nodes(left: &Node, right: &Node) -> (Comparison, bool) {
     let mut new_node = Node::new();
     new_node.val = left.val;
     val_as_list.list.push(new_node);
-    ret = compare_nodes(&val_as_list, right);
+    let (r,c) = compare_nodes(&val_as_list, right);
+    if !c {
+      return (r,c);
+    }
+    ret&=r;
 
   } else {
-    ret = compare_vals(left.val, right.val);
+    if left.val < right.val {
+      println!("   {} < {}", left.val, right.val);
+      return (true, false);
+    } else if left.val > right.val {
+      println!("   {} > {}", left.val, right.val);
+      return (false, true);
+    } else {
+      println!("   {} = {}", left.val, right.val);
+      return (true, true);
+    }
   }
 
-  println!(" : {:?}", ret);
-  ret
-}
-
-fn compare_vals(left: u16, right: u16) -> (Comparison, bool) {
-  print!("v");
-
-  let ret;
-
-  if left == right {
-    ret = Comparison::EQ
-  } else if left < right {
-    ret = Comparison::LT
-  } else {
-    ret = Comparison::GT
-  }
-
-  println!(" {}<={}: {:?}", left, right, ret);
-  (ret, true)
+  // println!(" : {:?}, {:?}", ret, cont);
+  (ret, ret)
 }
