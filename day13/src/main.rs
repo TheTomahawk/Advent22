@@ -1,6 +1,5 @@
 use std::{
   env, fmt,
-  fmt::{Error, Formatter, Debug},
   fs::File,
   io::{BufRead, BufReader},
   str::Chars,
@@ -58,27 +57,29 @@ fn part1(filename: &String) {
         1 => right = parse_line(&line),
         2 => {
           let (ret, _) = compare_lists(&left, &right);
-          println!(":: received {:?}\n", ret);
+          println!(":: received {:?}", ret);
           if ret {
-            sum += counter
-          };
-        }
+            sum += counter;
+            println!("     adding {} = {}", counter, sum);
+          }
+          println!("");
+          counter += 1;
+        },
         _ => {}
       }
       c += 1;
       c %= 3;
-      if c == 0 {
-        counter += 1;
-      }
     }
   }
 
   // EOF won't kick the counter up one, so we need one last compare
   let (ret, _) = compare_lists(&left, &right);
-  println!(":: received {:?}\n", ret);
+  println!(":: received {:?}", ret);
   if ret {
-    sum += counter
-  };
+    sum += counter;
+    println!("     adding {} = {}", counter, sum);
+  }
+  println!("");
 
   println!("Part one: answer = {sum}");
 }
@@ -127,65 +128,50 @@ fn parse_chars(mut chars: Chars, mut list: Vec<Node>) -> (Chars, Vec<Node>) {
       }
     }
   }
-
-  // println!("  returning list: {:?}", list);
   (chars, list)
 }
 
 fn parse_line(line: &String) -> Vec<Node> {
   let mut ret = Vec::new();
   println!("Parsing: {}", line);
-  // can be a number [ ] or ,
-  let chars = line.chars();
 
+  let chars = line.chars();
   (_, ret) = parse_chars(chars, ret);
 
-  // println!("Returning: {:?}", ret);
   ret
 }
 
 fn compare_lists(left: &Vec<Node>, right: &Vec<Node>) -> (bool, bool) {
-  println!("Comparing...");
-  println!("   left: {:?}", left);
-  println!("  right: {:?}", right);
-
   let mut ret = true;
-  let mut cont: bool = true;
 
-  if left.len() == 0 {
-    ret &= true;
-    
-  } else if right.len() == 0 {
-    ret = false;
-    cont = false;
+  if left.len() == 0 { // left ran out of terms
+    return (true, right.len() == 0);
 
-  } else {
+  } else if right.len() == 0 {  // right ran out of terms, but left didn't
+    return (false, false);
+
+  } else { // compare values in the lists
     for n in 0..left.len() {
-      if n < right.len() {
+      if n < right.len() {  
         let (r,c) = compare_nodes(&left[n], &right[n]);
         ret &= r;
+        if !r {
+          return (false, false);
+        }
         if !c {
           return (ret, false);
         }
-      } else {
-        ret = false;
+      } else { // right ran out of terms, but left didn't
+        return (false, false);
       }
     }
   }
-  println!(" : {:?}, {:?}", ret, cont);
-  (ret, cont)
+  (ret, ret)
 }
 
 fn compare_nodes(left: &Node, right: &Node) -> (bool, bool) {
-  let mut ret:bool = true;
-  let mut cont: bool = true;
-
   if left.is_list && right.is_list {
-    let (r,c) = compare_lists(&left.list, &right.list);
-    if !c {
-      return (r,c);
-    }
-    ret&=r;
+    return compare_lists(&left.list, &right.list);
 
   } else if left.is_list && !right.is_list {
     let mut val_as_list = Node::new();
@@ -193,11 +179,7 @@ fn compare_nodes(left: &Node, right: &Node) -> (bool, bool) {
     let mut new_node = Node::new();
     new_node.val = right.val;
     val_as_list.list.push(new_node);
-    let (r,c) = compare_nodes(left, &val_as_list);
-    if !c {
-      return (r,c);
-    }
-    ret&=r;
+    return compare_nodes(left, &val_as_list);
 
   } else if !left.is_list && right.is_list {
     let mut val_as_list = Node::new();
@@ -205,25 +187,17 @@ fn compare_nodes(left: &Node, right: &Node) -> (bool, bool) {
     let mut new_node = Node::new();
     new_node.val = left.val;
     val_as_list.list.push(new_node);
-    let (r,c) = compare_nodes(&val_as_list, right);
-    if !c {
-      return (r,c);
-    }
-    ret&=r;
+    return compare_nodes(&val_as_list, right);
 
   } else {
-    if left.val < right.val {
-      println!("   {} < {}", left.val, right.val);
+    if left.val < right.val { // left < right => correct order
       return (true, false);
-    } else if left.val > right.val {
-      println!("   {} > {}", left.val, right.val);
-      return (false, true);
-    } else {
-      println!("   {} = {}", left.val, right.val);
+
+    } else if left.val > right.val {  // left > left => wrong order
+      return (false, false);
+
+    } else {  // left == right => keep checking
       return (true, true);
     }
   }
-
-  // println!(" : {:?}, {:?}", ret, cont);
-  (ret, ret)
 }
