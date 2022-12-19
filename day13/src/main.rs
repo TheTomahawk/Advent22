@@ -13,6 +13,7 @@ pub fn main() {
   part2(&filename);
 }
 
+#[derive(Eq, PartialEq)]
 struct Node {
   val: u16,
   is_list: bool,
@@ -57,12 +58,9 @@ fn part1(filename: &String) {
         1 => right = parse_line(&line),
         2 => {
           let (ret, _) = compare_lists(&left, &right);
-          println!(":: received {:?}", ret);
           if ret {
             sum += counter;
-            println!("     adding {} = {}", counter, sum);
           }
-          println!("");
           counter += 1;
         },
         _ => {}
@@ -74,12 +72,9 @@ fn part1(filename: &String) {
 
   // EOF won't kick the counter up one, so we need one last compare
   let (ret, _) = compare_lists(&left, &right);
-  println!(":: received {:?}", ret);
   if ret {
     sum += counter;
-    println!("     adding {} = {}", counter, sum);
   }
-  println!("");
 
   println!("Part one: answer = {sum}");
 }
@@ -87,11 +82,52 @@ fn part1(filename: &String) {
 fn part2(filename: &String) {
   let infile = BufReader::new(File::open(filename).expect("Can't open that file"));
   let mut lines = infile.lines();
+
+  let mut all_the_lines: Vec<Vec<Node>> = Vec::new();
+
   while let Some(input) = lines.next() {
-    if let Ok(line) = input {}
+    if let Ok(line) = input {
+      let l = parse_line(&line);
+      if l.len() != 0 {
+        all_the_lines.push(l);
+      }
+    }
   }
 
-  println!("Part two: answer = ");
+  all_the_lines.push(val_as_list_as_vec(2));
+  all_the_lines.push(val_as_list_as_vec(6));
+
+  all_the_lines.sort_by(|left,right| if compare_lists(left, right).0 { std::cmp::Ordering::Less} else {std::cmp::Ordering::Greater});
+
+  let mut product = 1;
+  let comp2 = val_as_list(2);
+  let comp6 = val_as_list(6);
+
+  for i in 0..all_the_lines.len() {
+    if all_the_lines[i].contains(&comp2) || all_the_lines[i].contains(&comp6) {
+      product *= i+1;
+    }
+  }
+
+  println!("Part two: answer = {}", product);
+}
+
+fn val_as_list(val: u16) -> Node {
+  let mut n = Node::new();
+  n.is_list = false;
+  n.val = val;
+  let mut as_list = Node::new();
+  as_list.is_list = true;
+  as_list.list.push(n);
+
+  return as_list;
+}
+
+fn val_as_list_as_vec(val: u16) -> Vec<Node> {
+  let mut as_vec: Vec<Node> = Vec::new();
+  as_vec.push(val_as_list(val));
+
+  return as_vec;
 }
 
 fn parse_chars(mut chars: Chars, mut list: Vec<Node>) -> (Chars, Vec<Node>) {
@@ -133,7 +169,6 @@ fn parse_chars(mut chars: Chars, mut list: Vec<Node>) -> (Chars, Vec<Node>) {
 
 fn parse_line(line: &String) -> Vec<Node> {
   let mut ret = Vec::new();
-  println!("Parsing: {}", line);
 
   let chars = line.chars();
   (_, ret) = parse_chars(chars, ret);
