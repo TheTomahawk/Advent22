@@ -196,8 +196,10 @@ fn run_simulation(mut grid: Vec<Vec<bool>>, x: usize, y: usize) -> (Vec<Vec<bool
 
   } else if !grid[y + 1][x + 1] { // space below and right
     (grid, still_on_grid) =  run_simulation(grid, x + 1, y + 1);
-  } else if grid[y][x] {
+
+  } else if grid[y][x] { 
     still_on_grid = false;
+
   } else {  
     grid[y][x]=true;
   }
