@@ -66,9 +66,19 @@ pub fn main() {
 fn part1(valves: &HashMap<String, Valve>) {
   let start = "AA".to_string();
 
-
+  // let (p,s) = find_max_path(valves, &Vec::new(), start, 0, 30);
+  // println!("Path: {:?}", p);
   println!("Part one: answer = ");
 }
+
+
+
+fn part2() {
+  println!("Part two: answer = ");
+}
+
+
+
 
 fn find_max_path(
   valves: &HashMap<String, Valve>,
@@ -118,8 +128,4 @@ fn find_max_path(
   } else {
     return (Vec::new(), 0);
   }
-}
-
-fn part2() {
-  println!("Part two: answer = ");
 }
